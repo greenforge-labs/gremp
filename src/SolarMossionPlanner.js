@@ -7,6 +7,13 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
+type Waypoint = { lat: number; lng: number };
+
+type ProgressData = {
+  labels: string[];
+  datasets: { label: string; data: number[]; borderColor: string; backgroundColor: string }[];
+};
+
 const MQTT_BROKER_URL = "ws://your-mqtt-broker:9001";
 const VEHICLE_TOPIC = "vehicle/status";
 const MISSION_TOPIC = "vehicle/mission";
@@ -15,15 +22,15 @@ const MISSION_HISTORY_TOPIC = "vehicle/mission_history";
 const MISSION_CONTROL_TOPIC = "vehicle/mission_control";
 const MISSION_PROGRESS_TOPIC = "vehicle/mission_progress";
 
-const SolarMissionPlanner = () => {
-  const [waypoints, setWaypoints] = useState([]);
-  const [vehiclePosition, setVehiclePosition] = useState(null);
-  const [missionStatus, setMissionStatus] = useState("No active mission");
-  const [missionHistory, setMissionHistory] = useState([]);
-  const [missionProgress, setMissionProgress] = useState("0%");
-  const [missionDuration, setMissionDuration] = useState("0s");
-  const [progressData, setProgressData] = useState({ labels: [], datasets: [{ label: "Mission Progress", data: [] }] });
-  const [mqttClient, setMqttClient] = useState(null);
+const SolarMissionPlanner: React.FC = () => {
+  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [vehiclePosition, setVehiclePosition] = useState<[number, number] | null>(null);
+  const [missionStatus, setMissionStatus] = useState<string>("No active mission");
+  const [missionHistory, setMissionHistory] = useState<string[]>([]);
+  const [missionProgress, setMissionProgress] = useState<string>("0%");
+  const [missionDuration, setMissionDuration] = useState<string>("0s");
+  const [progressData, setProgressData] = useState<ProgressData>({ labels: [], datasets: [{ label: "Mission Progress", data: [], borderColor: "#4CAF50", backgroundColor: "rgba(76, 175, 80, 0.2)" }] });
+  const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_BROKER_URL);
@@ -51,10 +58,8 @@ const SolarMissionPlanner = () => {
         setProgressData(prevData => ({
           labels: [...prevData.labels, progressData.duration],
           datasets: [{
-            label: "Mission Progress",
-            data: [...prevData.datasets[0].data, parseFloat(progressData.progress.replace('%', ''))],
-            borderColor: "#4CAF50",
-            backgroundColor: "rgba(76, 175, 80, 0.2)"
+            ...prevData.datasets[0],
+            data: [...prevData.datasets[0].data, parseFloat(progressData.progress.replace('%', ''))]
           }]
         }));
       }
@@ -63,7 +68,7 @@ const SolarMissionPlanner = () => {
     return () => client.end();
   }, []);
 
-  const handleMapClick = (e) => {
+  const handleMapClick = (e: { latlng: { lat: number; lng: number } }) => {
     const { lat, lng } = e.latlng;
     setWaypoints([...waypoints, { lat, lng }]);
   };
@@ -118,7 +123,7 @@ const SolarMissionPlanner = () => {
       <button className="p-2 m-4 bg-blue-500 text-white rounded" onClick={exportToCSV}>
         Export Mission Plan (CSV)
       </button>
-      <button className="p-2 m-4 bg-green-500 text-white rounded" onClick={() => mqttClient.publish(MISSION_TOPIC, JSON.stringify({ waypoints }))}>
+      <button className="p-2 m-4 bg-green-500 text-white rounded" onClick={() => mqttClient?.publish(MISSION_TOPIC, JSON.stringify({ waypoints }))}>
         Send Mission to Vehicle
       </button>
     </div>
