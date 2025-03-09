@@ -43,7 +43,7 @@ const SolarMissionPlanner: React.FC = () => {
       client.subscribe(MISSION_PROGRESS_TOPIC);
     });
 
-    client.on("message", (topic, message) => {
+    client.on("message", (topic: string, message: Buffer) => {
       if (topic === VEHICLE_TOPIC) {
         const data = JSON.parse(message.toString());
         setVehiclePosition([data.lat, data.lon]);
